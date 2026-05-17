@@ -145,23 +145,34 @@ public class ProductDAO {
     // DELETE PRODUCT
     public void deleteProduct() {
 
-        try {
-            Connection conn = DBConnection.getConnection();// Get database connection
-            System.out.println("\n===== DELETE PRODUCT =====");// Display header for product deletion
-            System.out.print("Product ID: ");// Get product ID input
-            int id = sc.nextInt();// Read the product ID input
+         try {
+        Connection conn = DBConnection.getConnection();// Get database connection
+        System.out.println("\n===== DELETE PRODUCT =====");// Display header for product deletion
+        System.out.print("Product ID: ");// Get product ID input for deletion
+        int id = sc.nextInt();
 
-            String sql =
-                "DELETE FROM Products WHERE product_id=?";// SQL query to delete a product based on product ID
-            PreparedStatement pst = conn.prepareStatement(sql);// Prepare the SQL statement
-            pst.setInt(1, id);// Set product ID for the WHERE clause
-            pst.executeUpdate();// Execute the delete query
+        // 1. Delete the product
+        String sqlDelete = "DELETE FROM Products WHERE product_id=?";// SQL query to delete a product based on product ID
+        PreparedStatement pstDelete = conn.prepareStatement(sqlDelete);// Prepare the SQL statement for deletion
+        pstDelete.setInt(1, id);// Set product ID for the WHERE clause in deletion query
+        int rowsAffected = pstDelete.executeUpdate();// Execute the delete query and get the number of rows affected
 
-            System.out.println("Product Deleted!");// Confirmation message
+        if (rowsAffected > 0) {
+            // 2. Fix the counter so the NEXT insert uses the lowest available ID
+            // We find the current MAX id and set the counter to that.
+            String sqlReseed = "DECLARE @maxID INT = (SELECT ISNULL(MAX(product_id), 0) FROM Products); " +
+                               "DBCC CHECKIDENT ('Products', RESEED, @maxID);";// SQL query to reset the auto-increment counter to the current maximum product ID
+            PreparedStatement stReseed = conn.prepareStatement(sqlReseed);// Prepare the SQL statement to reset the counter
+            stReseed.execute();// Execute the counter reset query
 
-        } catch (SQLException e) {
-            System.err.println("Error occurred while deleting product: " + e.getMessage());// Print error message if product deletion fails
+            System.out.println("Product Deleted!");// Confirmation message for successful deletion and counter reset
+        } else {
+            System.out.println("Product ID not found.");//  Print message if the specified product ID does not exist in the database
         }
+
+    } catch (SQLException e) {
+        System.err.println("Error occurred while deleting product: " + e.getMessage());
+    }
     }
 
     // LOW STOCK ALERT
